@@ -10,7 +10,7 @@ import android.util.Log
 
 class KioskControlReceiver : BroadcastReceiver() {
     companion object {
-        private const val CONTROL_TOKEN = "86U6juhN"
+        private const val CONTROL_TOKEN = BuildConfig.KIOSK_TOKEN
     }
     val permanentRestrictions = listOf(
         UserManager.DISALLOW_ADD_USER,

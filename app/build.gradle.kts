@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
 }
@@ -18,6 +20,17 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        val props = Properties()
+        val f = rootProject.file("keystore.properties")
+        if (f.exists()) {
+            f.inputStream().use { props.load(it) }
+        }
+        buildConfigField("String", "KIOSK_TOKEN", "\"${props.getProperty("KIOSK_TOKEN", "")}\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {
