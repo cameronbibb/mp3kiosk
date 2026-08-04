@@ -15,6 +15,8 @@ import android.view.Gravity
 import android.widget.TextView
 
 class MainActivity : AppCompatActivity() {
+    private var spotifyLaunched = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
     }
@@ -27,6 +29,11 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         applyKioskState()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        spotifyLaunched = false
     }
 
     private fun applyKioskState() {
@@ -69,9 +76,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
     private fun tryLaunchSpotify(dpm: DevicePolicyManager, admin: ComponentName, attempt: Int) {
-        val failed = dpm.setPackagesSuspended(admin, arrayOf("com.spotify.music"), true)
-        Log.d("KioskAdmin", "Suspend failed for: ${failed.joinToString()}")
-        dpm.setPackagesSuspended(admin, arrayOf("com.spotify.music"), false)
+        if (spotifyLaunched) return
 
         val launch = packageManager.getLaunchIntentForPackage("com.spotify.music")
 
@@ -81,6 +86,7 @@ class MainActivity : AppCompatActivity() {
                 val options = ActivityOptions.makeBasic()
                 options.setLockTaskEnabled(true)
                 startActivity(launch, options.toBundle())
+                spotifyLaunched = true
             }, 1000)
             return
         }

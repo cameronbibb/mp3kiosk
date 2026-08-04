@@ -67,6 +67,7 @@ class KioskControlReceiver : BroadcastReceiver() {
                 prefs.edit().putBoolean("kioskEnabled", false).apply()
                 dpm.setLockTaskPackages(admin, arrayOf())
                 dpm.clearPackagePersistentPreferredActivities(admin, context.packageName)
+
                 for (restriction in temporaryRestrictions) {
                     dpm.clearUserRestriction(admin, restriction)
                 }
