@@ -1,5 +1,6 @@
 package com.kumh.mp3kiosk
 
+import android.app.ActivityManager
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import android.app.admin.DevicePolicyManager
@@ -23,6 +24,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        spotifyLaunched = false
         applyKioskState()
     }
 
@@ -62,6 +64,12 @@ class MainActivity : AppCompatActivity() {
                 )
 
                 dpm.setLockTaskPackages(admin, arrayOf(packageName, "com.spotify.music"))
+
+                if (!isInLockTaskMode()) {
+                    Log.d("KioskAdmin", "Locking to self")
+                    startLockTask()
+                }
+
                 tryLaunchSpotify(dpm, admin, 0)
 
             } else {
@@ -74,6 +82,11 @@ class MainActivity : AppCompatActivity() {
             tv.gravity = Gravity.CENTER
             setContentView(tv)
         }
+    }
+
+    private fun isInLockTaskMode(): Boolean {
+        val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        return am.lockTaskModeState != ActivityManager.LOCK_TASK_MODE_NONE
     }
     private fun tryLaunchSpotify(dpm: DevicePolicyManager, admin: ComponentName, attempt: Int) {
         if (spotifyLaunched) return
