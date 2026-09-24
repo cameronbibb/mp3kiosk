@@ -95,11 +95,24 @@ class KioskControlReceiver : BroadcastReceiver() {
                         prefs.edit()
                             .putString("pinSalt", salt)
                             .putString("pinHash", KioskPolicy.hashPin(pin, salt))
-                            .apply()
+                            .putInt("pinFailures", 0)
+                            .putInt("pinLockouts", 0)
+                            .putLong("lockoutUntil", 0L)
+                            .commit()
                         Log.d("KioskAdmin", "PIN set")
                         pending.setResultCode(RESULT_OK)
                         pending.setResultData("pinSet")
                     }
+                }
+                "clearLockout" -> {
+                    prefs.edit()
+                        .putInt("pinFailures", 0)
+                        .putInt("pinLockouts", 0)
+                        .putLong("lockoutUntil", 0L)
+                        .commit()
+                    Log.d("KioskAdmin", "PIN lockout cleared")
+                    pending.setResultCode(RESULT_OK)
+                    pending.setResultData("lockoutCleared")
                 }
                 else -> {
                     pending.setResultCode(RESULT_UNKNOWN_ACTION)

@@ -10,6 +10,7 @@ import android.app.ActivityOptions
 import android.app.AlertDialog
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.SharedPreferences
 import android.os.Handler
 import android.os.Looper
 import android.text.InputType
@@ -25,6 +26,10 @@ class MainActivity : AppCompatActivity() {
     private var spotifyLaunched = false
     private var tapCount = 0
     private var firstTapTime = 0L
+
+    private val maxAttempts = 5
+    private val baseLockoutMs = 15 * 60 * 1000L
+    private val maxLockoutMs = 24 * 60 * 60 * 1000L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -87,7 +92,11 @@ class MainActivity : AppCompatActivity() {
                     tapCount++
                     if (tapCount >= 7) {
                         tapCount = 0
-                        showPinDialog()
+                        if (lockoutRemaining(prefs) > 0) {
+                            Toast.makeText(this, "Try again later", Toast.LENGTH_SHORT).show()
+                        } else {
+                            showPinDialog()
+                        }
                     }
                 }
 
@@ -150,6 +159,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showPinDialog() {
+        val prefs = getSharedPreferences("kiosk", MODE_PRIVATE)
         val input = EditText(this)
         input.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
 
@@ -157,9 +167,15 @@ class MainActivity : AppCompatActivity() {
             .setTitle("Admin")
             .setView(input)
             .setPositiveButton("Unlock") { _, _ ->
+                if (lockoutRemaining(prefs) > 0) {
+                    Toast.makeText(this, "Try again later", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
                 if (checkPin(input.text.toString())) {
+                    recordSuccess(prefs)
                     unlockKiosk()
                 } else {
+                    recordFailure(prefs)
                     Toast.makeText(this, "Incorrect", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -194,5 +210,35 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "No admin PIN set. Set one from the dashboard first.",
                 Toast.LENGTH_LONG).show()
         }
+    }
+
+    private fun lockoutRemaining(prefs: SharedPreferences): Long {
+        val remaining = prefs.getLong("lockoutUntil", 0L) - System.currentTimeMillis()
+        if (remaining > maxLockoutMs) {
+            prefs.edit().putLong("lockoutUntil", 0L).commit()
+            return 0L
+        }
+        return maxOf(remaining, 0L)
+    }
+
+    private fun recordFailure(prefs: SharedPreferences) {
+        val failures = prefs.getInt("pinFailures", 0) + 1
+        val editor = prefs.edit().putInt("pinFailures", failures)
+        if (failures >= maxAttempts) {
+            val lockouts = prefs.getInt("pinLockouts", 0)
+            val duration = minOf(baseLockoutMs shl minOf(lockouts, 7), maxLockoutMs)
+            editor.putLong("lockoutUntil", System.currentTimeMillis() + duration)
+                .putInt("pinFailures", 0)
+                .putInt("pinLockouts", lockouts + 1)
+        }
+        editor.commit()
+    }
+
+    private fun recordSuccess(prefs: SharedPreferences) {
+        prefs.edit()
+            .putInt("pinFailures", 0)
+            .putInt("pinLockouts", 0)
+            .putLong("lockoutUntil", 0L)
+            .commit()
     }
 }
