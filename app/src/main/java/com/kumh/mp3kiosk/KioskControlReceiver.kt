@@ -6,8 +6,9 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.os.UserManager
 import android.util.Log
+import com.kumh.mp3kiosk.KioskPolicy.permanentRestrictions
+import com.kumh.mp3kiosk.KioskPolicy.temporaryRestrictions
 import org.json.JSONObject
 
 class KioskControlReceiver : BroadcastReceiver() {
@@ -17,27 +18,9 @@ class KioskControlReceiver : BroadcastReceiver() {
         const val RESULT_ERROR = 2
         const val RESULT_UNAUTHORIZED = 3
         const val RESULT_UNKNOWN_ACTION = 4
+        const val RESULT_MISSING_ARG = 5
+        const val RESULT_NO_PIN = 6
     }
-    private val permanentRestrictions = listOf(
-        UserManager.DISALLOW_ADD_USER,
-        UserManager.DISALLOW_USER_SWITCH,
-        UserManager.DISALLOW_SET_WALLPAPER,
-        UserManager.DISALLOW_OUTGOING_BEAM,
-        UserManager.DISALLOW_BLUETOOTH_SHARING
-    )
-
-    private val temporaryRestrictions = listOf(
-        UserManager.DISALLOW_FACTORY_RESET,
-        UserManager.DISALLOW_SAFE_BOOT,
-        UserManager.DISALLOW_APPS_CONTROL,
-        UserManager.DISALLOW_UNINSTALL_APPS,
-        UserManager.DISALLOW_MOUNT_PHYSICAL_MEDIA,
-        UserManager.DISALLOW_CONFIG_DATE_TIME,
-        UserManager.DISALLOW_CONFIG_WIFI,
-        UserManager.DISALLOW_NETWORK_RESET,
-        UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES,
-        UserManager.DISALLOW_CONFIG_BLUETOOTH
-    )
 
     override fun onReceive(context: Context, intent: Intent) {
         val pending = goAsync()
@@ -60,12 +43,19 @@ class KioskControlReceiver : BroadcastReceiver() {
                     pending.setResultData(queryState(context, dpm, prefs))
                 }
                 "enableKiosk" -> {
-                    enableKiosk(context, dpm, admin, prefs)
-                    pending.setResultCode(RESULT_OK)
-                    pending.setResultData("kioskEnabled")
+                    if (KioskPolicy.enableKiosk(dpm, admin, prefs)) {
+                        context.startActivity(
+                            Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                        pending.setResultCode(RESULT_OK)
+                        pending.setResultData("kioskEnabled")
+                    } else {
+                        pending.setResultCode(RESULT_NO_PIN)
+                        pending.setResultData("noPin")
+                    }
                 }
                 "disableKiosk" -> {
-                    disableKiosk(context, dpm, admin, prefs)
+                    KioskPolicy.disableKiosk(context, dpm, admin, prefs)
                     pending.setResultCode(RESULT_OK)
                     pending.setResultData("kioskDisabled")
                 }
@@ -94,6 +84,23 @@ class KioskControlReceiver : BroadcastReceiver() {
                     pending.setResultCode(RESULT_OK)
                     pending.setResultData("persistentHomeCleared")
                 }
+                "setPin" -> {
+                    val pin = intent.getStringExtra("pin")
+                    if (pin.isNullOrBlank() || !pin.all { it.isDigit() } || pin.length !in 4..8) {
+                        Log.d("KioskAdmin", "setPin: invalid or missing pin")
+                        pending.setResultCode(RESULT_MISSING_ARG)
+                        pending.setResultData("invalidPin")
+                    } else {
+                        val salt = KioskPolicy.generateSalt()
+                        prefs.edit()
+                            .putString("pinSalt", salt)
+                            .putString("pinHash", KioskPolicy.hashPin(pin, salt))
+                            .apply()
+                        Log.d("KioskAdmin", "PIN set")
+                        pending.setResultCode(RESULT_OK)
+                        pending.setResultData("pinSet")
+                    }
+                }
                 else -> {
                     pending.setResultCode(RESULT_UNKNOWN_ACTION)
                     pending.setResultData("unknownAction: $action")
@@ -112,28 +119,8 @@ class KioskControlReceiver : BroadcastReceiver() {
             put("deviceOwner", dpm.isDeviceOwnerApp(context.packageName))
             put("kioskEnabled", prefs.getBoolean("kioskEnabled", false))
             put("appVersion", BuildConfig.VERSION_NAME)
+            put("pinSet", prefs.contains("pinHash"))
         }.toString()
-    }
-    private fun enableKiosk(context: Context, dpm: DevicePolicyManager, admin: ComponentName, prefs: SharedPreferences) {
-        Log.d("KioskAdmin", "Enabling kiosk...")
-        for (restriction in temporaryRestrictions) {
-            dpm.addUserRestriction(admin, restriction)
-        }
-        for (restriction in permanentRestrictions) {
-            dpm.addUserRestriction(admin, restriction)
-        }
-        prefs.edit().putBoolean("kioskEnabled", true).apply()
-        context.startActivity(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    }
-
-    private fun disableKiosk(context: Context, dpm: DevicePolicyManager, admin: ComponentName, prefs: SharedPreferences) {
-        Log.d("KioskAdmin", "Disabling kiosk...")
-        prefs.edit().putBoolean("kioskEnabled", false).apply()
-        dpm.setLockTaskPackages(admin, arrayOf())
-        dpm.clearPackagePersistentPreferredActivities(admin, context.packageName)
-        for (restriction in temporaryRestrictions) {
-            dpm.clearUserRestriction(admin, restriction)
-        }
     }
 
     private fun wipeDevice(dpm: DevicePolicyManager) {

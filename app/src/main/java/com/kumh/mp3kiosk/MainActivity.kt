@@ -7,16 +7,24 @@ import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
 import android.app.ActivityOptions
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Handler
 import android.os.Looper
+import android.text.InputType
 import android.util.Log
 import android.view.Gravity
+import android.view.View
+import android.widget.Button
+import android.widget.EditText
 import android.widget.TextView
+import android.widget.Toast
 
 class MainActivity : AppCompatActivity() {
     private var spotifyLaunched = false
+    private var tapCount = 0
+    private var firstTapTime = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,15 +73,36 @@ class MainActivity : AppCompatActivity() {
 
                 dpm.setLockTaskPackages(admin, arrayOf(packageName, "com.spotify.music"))
 
+                setContentView(R.layout.activity_main)
+                findViewById<Button>(R.id.musicButton).setOnClickListener {
+                    tryLaunchSpotify(dpm, admin, 0)
+                }
+                findViewById<View>(R.id.adminZone).setOnClickListener {
+                    val now = System.currentTimeMillis()
+                    if (now - firstTapTime > 5000) {
+                        tapCount = 0
+                        firstTapTime = now
+                    }
+                    tapCount++
+                    if (tapCount >= 7) {
+                        tapCount = 0
+                        showPinDialog()
+                    }
+                }
+
                 if (!isInLockTaskMode()) {
                     Log.d("KioskAdmin", "Locking to self")
                     startLockTask()
                 }
 
-                tryLaunchSpotify(dpm, admin, 0)
-
             } else {
-                Log.d("KioskAdmin", "Kiosk disabled - skipping lockdown")
+                Log.d("KioskAdmin", "Kiosk disabled - showing lock option")
+                setContentView(R.layout.activity_main)
+                findViewById<Button>(R.id.musicButton).visibility = View.GONE
+                findViewById<Button>(R.id.lockButton).apply {
+                    visibility = View.VISIBLE
+                    setOnClickListener { relockKiosk() }
+                }
             }
         } else {
             val tv = TextView(this)
@@ -118,4 +147,50 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun showPinDialog() {
+        val input = EditText(this)
+        input.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
+
+        AlertDialog.Builder(this)
+            .setTitle("Admin")
+            .setView(input)
+            .setPositiveButton("Unlock") { _, _ ->
+                if (checkPin(input.text.toString())) {
+                    unlockKiosk()
+                } else {
+                    Toast.makeText(this, "Incorrect", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun checkPin(pin: String): Boolean {
+        val prefs = getSharedPreferences("kiosk", Context.MODE_PRIVATE)
+        val salt = prefs.getString("pinSalt", null) ?: return false
+        val hash = prefs.getString("pinHash", null) ?: return false
+        return KioskPolicy.hashPin(pin, salt) == hash
+    }
+
+    private fun unlockKiosk() {
+        val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        val admin = ComponentName(this, KioskAdminReceiver::class.java)
+        val prefs = getSharedPreferences("kiosk", Context.MODE_PRIVATE)
+
+        stopLockTask()
+        KioskPolicy.disableKiosk(this, dpm, admin, prefs)
+        finish()
+    }
+    private fun relockKiosk() {
+        val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        val admin = ComponentName(this, KioskAdminReceiver::class.java)
+        val prefs = getSharedPreferences("kiosk", Context.MODE_PRIVATE)
+
+        if (KioskPolicy.enableKiosk(dpm, admin, prefs)) {
+            applyKioskState()
+        } else {
+            Toast.makeText(this, "No admin PIN set. Set one from the dashboard first.",
+                Toast.LENGTH_LONG).show()
+        }
+    }
 }
