@@ -1,11 +1,11 @@
 package com.kumh.mp3kiosk
 
+import android.annotation.SuppressLint
 import android.app.ActivityManager
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
-import android.content.Context
 import android.app.ActivityOptions
 import android.app.AlertDialog
 import android.content.Intent
@@ -46,12 +46,13 @@ class MainActivity : AppCompatActivity() {
         spotifyLaunched = false
     }
 
+    @SuppressLint("SetTextI18n")
     private fun applyKioskState() {
-        val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        val dpm = getSystemService(DEVICE_POLICY_SERVICE) as DevicePolicyManager
         val admin = ComponentName(this, KioskAdminReceiver::class.java)
 
         if (dpm.isDeviceOwnerApp(packageName)) {
-            val prefs = getSharedPreferences("kiosk", Context.MODE_PRIVATE)
+            val prefs = getSharedPreferences("kiosk", MODE_PRIVATE)
             val enabled = prefs.getBoolean("kioskEnabled", false)
 
             if (enabled) {
@@ -114,9 +115,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun isInLockTaskMode(): Boolean {
-        val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val am = getSystemService(ACTIVITY_SERVICE) as ActivityManager
         return am.lockTaskModeState != ActivityManager.LOCK_TASK_MODE_NONE
     }
+    @SuppressLint("SetTextI18n")
     private fun tryLaunchSpotify(dpm: DevicePolicyManager, admin: ComponentName, attempt: Int) {
         if (spotifyLaunched) return
 
@@ -166,25 +168,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkPin(pin: String): Boolean {
-        val prefs = getSharedPreferences("kiosk", Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("kiosk", MODE_PRIVATE)
         val salt = prefs.getString("pinSalt", null) ?: return false
         val hash = prefs.getString("pinHash", null) ?: return false
         return KioskPolicy.hashPin(pin, salt) == hash
     }
 
     private fun unlockKiosk() {
-        val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        val dpm = getSystemService(DEVICE_POLICY_SERVICE) as DevicePolicyManager
         val admin = ComponentName(this, KioskAdminReceiver::class.java)
-        val prefs = getSharedPreferences("kiosk", Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("kiosk", MODE_PRIVATE)
 
         stopLockTask()
         KioskPolicy.disableKiosk(this, dpm, admin, prefs)
         finish()
     }
     private fun relockKiosk() {
-        val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        val dpm = getSystemService(DEVICE_POLICY_SERVICE) as DevicePolicyManager
         val admin = ComponentName(this, KioskAdminReceiver::class.java)
-        val prefs = getSharedPreferences("kiosk", Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("kiosk", MODE_PRIVATE)
 
         if (KioskPolicy.enableKiosk(dpm, admin, prefs)) {
             applyKioskState()
