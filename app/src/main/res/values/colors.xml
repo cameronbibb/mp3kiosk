@@ -2,4 +2,11 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="kiosk_bg">#12151C</color>
+    <color name="kiosk_surface">#1C212B</color>
+    <color name="kiosk_text">#F2F4F8</color>
+    <color name="kiosk_text_muted">#8A93A6</color>
+    <color name="kiosk_accent">#4FD1C5</color>
+    <color name="kiosk_on_accent">#0B1A1A</color>
+    <color name="kiosk_warning">#F2A33A</color>
 </resources>

@@ -1,3 +1,17 @@
 <resources>
     <string name="app_name">mp3kiosk</string>
+    <string name="info_link">Information</string>
+    <string name="info_title">Information</string>
+    <string name="info_q_when">When do playlist updates happen?</string>
+    <string name="info_a_when">Playlist updates happen on Wednesdays.</string>
+    <string name="info_q_how">How do I get playlist updates?</string>
+    <string name="info_a_how">To receive playlist updates you must:</string>
+    <string name="info_a_how_1">• Complete a playlist form and turn it in by Tuesday night.</string>
+    <string name="info_a_how_2">• Turn in your MP3 player by Tuesday night.</string>
+    <string name="info_q_form">How do I get a playlist form?</string>
+    <string name="info_a_form">Ask staff for a playlist form.</string>
+    <string name="info_deadline">In order to receive playlist updates you must turn your MP3 player in to staff by Tuesday night.</string>
+    <string name="info_q_error">What if something is wrong with my device?</string>
+    <string name="info_a_error">If you get logged out of your music or if your MP3 player is not operating properly, turn it into staff and let them know what\'s happening with your device.</string>
+    <string name="info_close">Close</string>
 </resources>

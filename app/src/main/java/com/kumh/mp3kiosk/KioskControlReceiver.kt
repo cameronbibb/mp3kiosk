@@ -1,14 +1,18 @@
 package com.kumh.mp3kiosk
 
+import android.annotation.SuppressLint
 import android.app.admin.DevicePolicyManager
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.os.Bundle
+import android.os.UserManager
 import android.util.Log
 import com.kumh.mp3kiosk.KioskPolicy.permanentRestrictions
 import com.kumh.mp3kiosk.KioskPolicy.temporaryRestrictions
+import org.json.JSONArray
 import org.json.JSONObject
 
 class KioskControlReceiver : BroadcastReceiver() {
@@ -40,10 +44,10 @@ class KioskControlReceiver : BroadcastReceiver() {
             when (action) {
                 "queryState" -> {
                     pending.setResultCode(RESULT_OK)
-                    pending.setResultData(queryState(context, dpm, prefs))
+                    pending.setResultData(queryState(context, dpm, admin, prefs))
                 }
                 "enableKiosk" -> {
-                    if (KioskPolicy.enableKiosk(dpm, admin, prefs)) {
+                    if (KioskPolicy.enableKiosk(context, dpm, admin, prefs)) {
                         context.startActivity(
                             Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         )
@@ -127,14 +131,30 @@ class KioskControlReceiver : BroadcastReceiver() {
             pending.finish()
         }
     }
-    private fun queryState(context: Context, dpm: DevicePolicyManager, prefs: SharedPreferences): String {
+    @SuppressLint("ServiceCast")
+    private fun queryState(
+        context: Context,
+        dpm: DevicePolicyManager,
+        admin: ComponentName,
+        prefs: SharedPreferences
+    ): String {
+        val isOwner = dpm.isDeviceOwnerApp(context.packageName)
+        val um = context.getSystemService(Context.USER_SERVICE) as UserManager
+
         return JSONObject().apply {
-            put("deviceOwner", dpm.isDeviceOwnerApp(context.packageName))
+            put("deviceOwner", isOwner)
             put("kioskEnabled", prefs.getBoolean("kioskEnabled", false))
             put("appVersion", BuildConfig.VERSION_NAME)
             put("pinSet", prefs.contains("pinHash"))
+            put("ownRestrictions",
+                if (isOwner) bundleKeys(dpm.getUserRestrictions(admin)) else JSONArray()
+            )
+            put("effectiveRestrictions", bundleKeys(um.userRestrictions))
         }.toString()
     }
+
+    private fun bundleKeys(b: Bundle): JSONArray =
+        JSONArray(b.keySet().filter { b.getBoolean(it) }.sorted())
 
     private fun wipeDevice(dpm: DevicePolicyManager) {
         Log.d("KioskAdmin", "Wiping device...")

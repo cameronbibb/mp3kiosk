@@ -11,8 +11,11 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.os.BatteryManager
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
+import android.os.StatFs
 import android.text.InputType
 import android.util.Log
 import android.view.Gravity
@@ -21,6 +24,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
     private var spotifyLaunched = false
@@ -31,14 +35,31 @@ class MainActivity : AppCompatActivity() {
     private val baseLockoutMs = 15 * 60 * 1000L
     private val maxLockoutMs = 24 * 60 * 60 * 1000L
 
+    private val statusHandler = Handler(Looper.getMainLooper())
+    private val statusTicker = object : Runnable {
+        override fun run() {
+            updateStatus()
+            statusHandler.postDelayed(this, 30_000)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
     }
 
     override fun onResume() {
         super.onResume()
+        Log.d("KioskAdmin", "onResume start")
         spotifyLaunched = false
         applyKioskState()
+        Log.d("KioskAdmin", "applyKioskState done")
+        statusHandler.removeCallbacks(statusTicker)
+        statusHandler.postDelayed(statusTicker, 30_000)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        statusHandler.removeCallbacks(statusTicker)
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -61,25 +82,9 @@ class MainActivity : AppCompatActivity() {
             val enabled = prefs.getBoolean("kioskEnabled", false)
 
             if (enabled) {
-                val filter = IntentFilter(Intent.ACTION_MAIN)
-                filter.addCategory(Intent.CATEGORY_HOME)
-                filter.addCategory(Intent.CATEGORY_DEFAULT)
-
-                dpm.addPersistentPreferredActivity(
-                    admin,
-                    filter,
-                    ComponentName(packageName, MainActivity::class.java.name)
-                )
-
-                dpm.setLockTaskFeatures(
-                    admin,
-                    DevicePolicyManager.LOCK_TASK_FEATURE_GLOBAL_ACTIONS or
-                            DevicePolicyManager.LOCK_TASK_FEATURE_SYSTEM_INFO
-                )
-
-                dpm.setLockTaskPackages(admin, arrayOf(packageName, "com.spotify.music"))
-
                 setContentView(R.layout.activity_main)
+                findViewById<Button>(R.id.infoButton).setOnClickListener { showInfoDialog() }
+                Log.d("KioskAdmin", "layout inflated")
                 findViewById<Button>(R.id.musicButton).setOnClickListener {
                     tryLaunchSpotify(dpm, admin, 0)
                 }
@@ -99,15 +104,20 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 }
-
-                if (!isInLockTaskMode()) {
-                    Log.d("KioskAdmin", "Locking to self")
+                Log.d("KioskAdmin", "listeners set")
+                Log.d("KioskAdmin", "checking lock state")
+                val locked = isInLockTaskMode()
+                Log.d("KioskAdmin", "lock state = $locked")
+                if (!locked) {
+                    Log.d("KioskAdmin", "calling startLockTask")
                     startLockTask()
+                    Log.d("KioskAdmin", "startLockTask returned")
                 }
 
             } else {
                 Log.d("KioskAdmin", "Kiosk disabled - showing lock option")
                 setContentView(R.layout.activity_main)
+                findViewById<Button>(R.id.infoButton).setOnClickListener { showInfoDialog() }
                 findViewById<Button>(R.id.musicButton).visibility = View.GONE
                 findViewById<Button>(R.id.lockButton).apply {
                     visibility = View.VISIBLE
@@ -121,6 +131,7 @@ class MainActivity : AppCompatActivity() {
             tv.gravity = Gravity.CENTER
             setContentView(tv)
         }
+        updateStatus()
     }
 
     private fun isInLockTaskMode(): Boolean {
@@ -204,7 +215,7 @@ class MainActivity : AppCompatActivity() {
         val admin = ComponentName(this, KioskAdminReceiver::class.java)
         val prefs = getSharedPreferences("kiosk", MODE_PRIVATE)
 
-        if (KioskPolicy.enableKiosk(dpm, admin, prefs)) {
+        if (KioskPolicy.enableKiosk(this, dpm, admin, prefs)) {
             applyKioskState()
         } else {
             Toast.makeText(this, "No admin PIN set. Set one from the dashboard first.",
@@ -240,5 +251,33 @@ class MainActivity : AppCompatActivity() {
             .putInt("pinLockouts", 0)
             .putLong("lockoutUntil", 0L)
             .commit()
+    }
+
+    @SuppressLint("SetTextI18n", "ServiceCast")
+    private fun updateStatus() {
+        val batteryText = findViewById<TextView>(R.id.batteryText) ?: return
+        val storageText = findViewById<TextView>(R.id.storageText) ?: return
+        Log.d("KioskAdmin", "reading battery")
+
+        val bm = getSystemService(BATTERY_SERVICE) as BatteryManager
+        val pct = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+        batteryText.text = if (bm.isCharging) "$pct% · Charging" else "$pct%"
+
+        Log.d("KioskAdmin", "reading storage")
+
+        val stat = StatFs(Environment.getDataDirectory().path)
+        val freeGb = stat.availableBytes / 1_000_000_000.0
+        storageText.text = String.format(Locale.US, "%.1f GB free", freeGb)
+
+        Log.d("KioskAdmin", "status done")
+    }
+
+    @SuppressLint("InflateParams")
+    private fun showInfoDialog() {
+        val view = layoutInflater.inflate(R.layout.dialog_info, null)
+        val dialog = AlertDialog.Builder(this).setView(view).create()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        view.findViewById<Button>(R.id.closeInfoButton).setOnClickListener { dialog.dismiss() }
+        dialog.show()
     }
 }

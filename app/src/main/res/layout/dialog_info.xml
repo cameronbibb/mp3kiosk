@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/status_card_bg"
+    android:padding="20dp">
+
+    <TextView
+        android:id="@+id/infoTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/info_title"
+        android:textColor="@color/kiosk_text"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ScrollView
+        android:id="@+id/infoScroll"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:fadeScrollbars="false"
+        android:fadingEdgeLength="24dp"
+        android:requiresFadingEdge="vertical"
+        app:layout_constrainedHeight="true"
+        app:layout_constraintBottom_toTopOf="@id/closeInfoButton"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/infoTitle"
+        app:layout_constraintVertical_bias="0"
+        app:layout_constraintVertical_chainStyle="packed">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView style="@style/InfoQuestion" android:text="@string/info_q_when" />
+            <TextView style="@style/InfoAnswer" android:text="@string/info_a_when" />
+
+            <TextView style="@style/InfoQuestion" android:text="@string/info_q_how" />
+            <TextView style="@style/InfoAnswer" android:text="@string/info_a_how" />
+            <TextView style="@style/InfoBullet" android:text="@string/info_a_how_1" />
+            <TextView style="@style/InfoBullet" android:text="@string/info_a_how_2" />
+
+            <TextView style="@style/InfoQuestion" android:text="@string/info_q_form" />
+            <TextView style="@style/InfoAnswer" android:text="@string/info_a_form" />
+
+            <TextView style="@style/InfoQuestion" android:text="@string/info_q_error" />
+            <TextView style="@style/InfoAnswer" android:text="@string/info_a_error" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:gravity="center"
+                android:text="@string/info_deadline"
+                android:textAllCaps="true"
+                android:textColor="@color/kiosk_warning"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </ScrollView>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/closeInfoButton"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:layout_marginTop="16dp"
+        android:text="@string/info_close"
+        android:textColor="@color/kiosk_on_accent"
+        android:textSize="18sp"
+        app:backgroundTint="@color/kiosk_accent"
+        app:cornerRadius="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/infoScroll" />
+</androidx.constraintlayout.widget.ConstraintLayout>
