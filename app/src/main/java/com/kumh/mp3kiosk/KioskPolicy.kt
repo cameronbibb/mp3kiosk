@@ -41,6 +41,7 @@ object KioskPolicy {
         if (!prefs.contains("pinHash")) return false
         for (r in temporaryRestrictions) dpm.addUserRestriction(admin, r)
         for (r in permanentRestrictions) dpm.addUserRestriction(admin, r)
+        setUnlockedAppsHidden(dpm, admin, true)
 
         val filter = IntentFilter(Intent.ACTION_MAIN).apply {
             addCategory(Intent.CATEGORY_HOME)
@@ -58,7 +59,7 @@ object KioskPolicy {
         dpm.setLockTaskPackages(admin, arrayOf(context.packageName, "com.spotify.music"))
 
 
-        prefs.edit().putBoolean("kioskEnabled", true).apply()
+        prefs.edit().putBoolean("kioskEnabled", true).commit()
         return true
     }
     fun disableKiosk(
@@ -68,12 +69,13 @@ object KioskPolicy {
         prefs: SharedPreferences
     ) {
         Log.d("KioskAdmin", "Disabling kiosk...")
-        prefs.edit().putBoolean("kioskEnabled", false).apply()
+        prefs.edit().putBoolean("kioskEnabled", false).commit()
         dpm.setLockTaskPackages(admin, arrayOf())
         dpm.clearPackagePersistentPreferredActivities(admin, context.packageName)
         for (r in temporaryRestrictions) {
             dpm.clearUserRestriction(admin, r)
         }
+        setUnlockedAppsHidden(dpm, admin, false)
     }
 
     fun hashPin(pin: String, salt: String): String {
@@ -86,5 +88,24 @@ object KioskPolicy {
         val bytes = ByteArray(16)
         java.security.SecureRandom().nextBytes(bytes)
         return bytes.joinToString("") { "%02x".format(it) }
+    }
+
+    val unlockedOnlyApps = listOf(
+        "com.itel.filemanager",
+        "com.mediatek.filemanager",
+        "com.android.documentsui",
+        "com.google.android.documentsui",
+        "com.android.chrome",
+    )
+
+    fun setUnlockedAppsHidden(dpm: DevicePolicyManager, admin: ComponentName, hidden: Boolean) {
+        for (pkg in unlockedOnlyApps) {
+            val ok = try {
+                dpm.setApplicationHidden(admin, pkg, hidden)
+            } catch (e: Exception) {
+                false
+            }
+            Log.d("KioskAdmin", "setApplicationHidden($pkg, $hidden) = $ok")
+        }
     }
 }
