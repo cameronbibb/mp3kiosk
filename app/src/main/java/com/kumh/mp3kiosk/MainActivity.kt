@@ -24,7 +24,11 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import java.util.Locale
+import androidx.activity.OnBackPressedCallback
 
 class MainActivity : AppCompatActivity() {
     private var spotifyLaunched = false
@@ -45,6 +49,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                // Kiosk home screen: ignore back
+            }
+        })
     }
 
     override fun onResume() {
@@ -70,6 +79,11 @@ class MainActivity : AppCompatActivity() {
     override fun onStop() {
         super.onStop()
         spotifyLaunched = false
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) hideNavBar()
     }
 
     @SuppressLint("SetTextI18n")
@@ -279,5 +293,12 @@ class MainActivity : AppCompatActivity() {
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
         view.findViewById<Button>(R.id.closeInfoButton).setOnClickListener { dialog.dismiss() }
         dialog.show()
+    }
+
+    private fun hideNavBar() {
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            hide(WindowInsetsCompat.Type.navigationBars())
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
     }
 }
