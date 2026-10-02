@@ -9,7 +9,6 @@ import android.content.ComponentName
 import android.app.ActivityOptions
 import android.app.AlertDialog
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.os.BatteryManager
 import android.os.Environment

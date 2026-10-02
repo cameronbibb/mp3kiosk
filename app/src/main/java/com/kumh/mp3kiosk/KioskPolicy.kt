@@ -29,7 +29,99 @@ object KioskPolicy {
         UserManager.DISALLOW_CONFIG_WIFI,
         UserManager.DISALLOW_NETWORK_RESET,
         UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES,
-        UserManager.DISALLOW_CONFIG_BLUETOOTH
+        UserManager.DISALLOW_CONFIG_BLUETOOTH,
+        UserManager.DISALLOW_SYSTEM_ERROR_DIALOGS
+    )
+
+    val alwaysHiddenApps = listOf(
+        // Other music, video, and books
+        "com.amazon.mp3",
+        "com.apple.android.music",
+        "com.aspiro.tidal",
+        "com.pandora.android",
+        "com.hiby.music",
+        "com.aimp.player",
+        "remix.myplayer",
+        "com.spotify.kids",
+        "com.audible.application",
+        "com.overdrive.mobile.android.libby",
+        "com.amazon.kindle",
+        "com.flyersoft.moonreader",
+        "com.flyersoft.moonreaderp",
+        "com.google.android.youtube",
+        "com.google.android.apps.youtube.kids",
+        "com.mxtech.videoplayer.pro",
+        "com.kmplayer",
+        "com.android.fmradio",
+
+        // Installing apps and sharing files
+        "com.android.vending",
+        "com.innioasis.xapkinstaller",
+        "com.omniashare.minishare",
+        "com.android.gallery3d",
+
+        // Recording
+        "com.android.soundrecorder",
+        "com.mediatek.callrecorder",
+
+        // Parental control apps (one had a known bypass; both compete with the kiosk)
+        "com.innioasis.parentmanager",
+        "com.hongyao.parentalmanagement",
+
+        // Factory, engineering, and debug tools
+        "com.mediatek.engineermode",
+        "com.mediatek.factorymode",
+        "com.sprd.factorymode",
+        "com.jz.agingtest",
+        "com.zte.engineer",
+        "com.focaltech.fpsensormmitest",
+        "com.mediatek.ygps",
+        "com.mediatek.lbs.em2.ui",
+        "com.debug.loggerui",
+
+        // System changes residents shouldn't be able to make
+        "com.android.dynsystem",               // can boot a different system image
+        "com.mediatek.voiceunlock",            // another way to set a screen lock
+        "com.google.android.apps.wellbeing",   // app timers could block Spotify
+
+        // Apps with no kiosk use
+        "com.android.calendar",
+        "com.android.calculator2",
+        "com.android.deskclock",
+        "com.android.egg",
+    )
+
+    val unlockedOnlyApps = listOf(
+        "com.android.chrome",                  // Spotify login needs a browser
+        "com.android.documentsui",             // Files — the file manager on Android 14
+        "com.google.android.documentsui",
+        "com.itel.filemanager",                // Android 9, older build
+        "com.mediatek.filemanager",            // Android 9, newer build
+        "com.android.providers.downloads.ui",  // Downloads app
+    )
+
+    val neverHideApps = setOf(
+        "android",
+        "com.android.systemui",
+        "com.android.settings",                   // holds the boot-time fallback screen
+        "com.android.launcher3",                  // home screen when unlocked
+        "com.android.shell",                      // ADB
+        "com.android.packageinstaller",           // on-device APK installs
+        "com.android.permissioncontroller",
+        "com.android.managedprovisioning",
+        "com.android.intentresolver",             // the system app chooser
+        "com.android.webview",
+        "com.google.android.webview",             // Spotify login
+        "com.android.inputmethod.latin",
+        "com.google.android.inputmethod.latin",   // keyboard for the PIN dialog
+        "com.android.bluetooth",                  // headphones
+        "com.android.providers.settings",
+        "com.android.providers.media",
+        "com.android.providers.media.module",
+        "com.android.externalstorage",
+        "com.android.phone",
+        "com.kumh.mp3kiosk",
+        "com.spotify.music",
     )
 
     fun enableKiosk(
@@ -41,7 +133,9 @@ object KioskPolicy {
         if (!prefs.contains("pinHash")) return false
         for (r in temporaryRestrictions) dpm.addUserRestriction(admin, r)
         for (r in permanentRestrictions) dpm.addUserRestriction(admin, r)
-        setUnlockedAppsHidden(dpm, admin, true)
+
+        setAppsHidden(dpm, admin, alwaysHiddenApps, true)
+        setAppsHidden(dpm, admin, unlockedOnlyApps, true)
 
         val filter = IntentFilter(Intent.ACTION_MAIN).apply {
             addCategory(Intent.CATEGORY_HOME)
@@ -75,7 +169,7 @@ object KioskPolicy {
         for (r in temporaryRestrictions) {
             dpm.clearUserRestriction(admin, r)
         }
-        setUnlockedAppsHidden(dpm, admin, false)
+        setAppsHidden(dpm, admin, unlockedOnlyApps, false)
     }
 
     fun hashPin(pin: String, salt: String): String {
@@ -90,16 +184,17 @@ object KioskPolicy {
         return bytes.joinToString("") { "%02x".format(it) }
     }
 
-    val unlockedOnlyApps = listOf(
-        "com.itel.filemanager",
-        "com.mediatek.filemanager",
-        "com.android.documentsui",
-        "com.google.android.documentsui",
-        "com.android.chrome",
-    )
-
-    fun setUnlockedAppsHidden(dpm: DevicePolicyManager, admin: ComponentName, hidden: Boolean) {
-        for (pkg in unlockedOnlyApps) {
+    fun setAppsHidden(
+        dpm: DevicePolicyManager,
+        admin: ComponentName,
+        packages: List<String>,
+        hidden: Boolean
+    ) {
+        for (pkg in packages) {
+            if (hidden && pkg in neverHideApps) {
+                Log.w("KioskAdmin", "Refusing to hide protected package $pkg")
+                continue
+            }
             val ok = try {
                 dpm.setApplicationHidden(admin, pkg, hidden)
             } catch (e: Exception) {

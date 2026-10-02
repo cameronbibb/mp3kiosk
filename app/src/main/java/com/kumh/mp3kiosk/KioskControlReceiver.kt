@@ -118,6 +118,18 @@ class KioskControlReceiver : BroadcastReceiver() {
                     pending.setResultCode(RESULT_OK)
                     pending.setResultData("lockoutCleared")
                 }
+                "unhideApp" -> {
+                    val pkg = intent.getStringExtra("pkg")
+                    if (pkg.isNullOrBlank()) {
+                        pending.setResultCode(RESULT_MISSING_ARG)
+                        pending.setResultData("missingPkg")
+                    } else {
+                        val ok = dpm.setApplicationHidden(admin, pkg, false)
+                        pending.setResultCode(if (ok) RESULT_OK else RESULT_ERROR)
+                        pending.setResultData(if (ok) "unhidden" else "unhideFailed")
+                    }
+                }
+
                 else -> {
                     pending.setResultCode(RESULT_UNKNOWN_ACTION)
                     pending.setResultData("unknownAction: $action")
