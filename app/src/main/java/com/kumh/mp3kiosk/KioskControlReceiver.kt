@@ -7,9 +7,11 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.os.Build
 import android.os.Bundle
 import android.os.UserManager
 import android.util.Log
+import android.provider.Settings
 import com.kumh.mp3kiosk.KioskPolicy.permanentRestrictions
 import com.kumh.mp3kiosk.KioskPolicy.temporaryRestrictions
 import org.json.JSONArray
@@ -130,6 +132,23 @@ class KioskControlReceiver : BroadcastReceiver() {
                     }
                 }
 
+                "setTime" -> {
+                    val tz = intent.getStringExtra("tz")
+                    val epoch = intent.getLongExtra("epoch", -1L)
+                    if (tz.isNullOrBlank() || epoch <= 0) {
+                        pending.setResultCode(RESULT_MISSING_ARG)
+                        pending.setResultData("missingTimeArgs")
+                    } else {
+                        setAutoTimeZone(dpm, admin, false)
+                        setAutoTime(dpm, admin, false)
+                        val tzOk = dpm.setTimeZone(admin, tz)
+                        val timeOk = dpm.setTime(admin, epoch)
+                        setAutoTime(dpm, admin, true)
+                        pending.setResultCode(if (tzOk && timeOk) RESULT_OK else RESULT_ERROR)
+                        pending.setResultData("tz=$tzOk time=$timeOk")
+                    }
+                }
+
                 else -> {
                     pending.setResultCode(RESULT_UNKNOWN_ACTION)
                     pending.setResultData("unknownAction: $action")
@@ -162,6 +181,7 @@ class KioskControlReceiver : BroadcastReceiver() {
                 if (isOwner) bundleKeys(dpm.getUserRestrictions(admin)) else JSONArray()
             )
             put("effectiveRestrictions", bundleKeys(um.userRestrictions))
+            put("deviceTime", System.currentTimeMillis())
         }.toString()
     }
 
@@ -195,5 +215,21 @@ class KioskControlReceiver : BroadcastReceiver() {
     private fun clearHome(dpm: DevicePolicyManager, admin: ComponentName, packageName: String) {
         Log.d("KioskAdmin", "Clearing persistent home...")
         dpm.clearPackagePersistentPreferredActivities(admin, packageName)
+    }
+
+    private fun setAutoTime(dpm: DevicePolicyManager, admin: ComponentName, on: Boolean) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            dpm.setAutoTimeEnabled(admin, on)
+        } else {
+            dpm.setGlobalSetting(admin, Settings.Global.AUTO_TIME, if (on) "1" else "0")
+        }
+    }
+
+    private fun setAutoTimeZone(dpm: DevicePolicyManager, admin: ComponentName, on: Boolean) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            dpm.setAutoTimeZoneEnabled(admin, on)
+        } else {
+            dpm.setGlobalSetting(admin, Settings.Global.AUTO_TIME_ZONE, if (on) "1" else "0")
+        }
     }
 }
