@@ -149,6 +149,19 @@ class KioskControlReceiver : BroadcastReceiver() {
                     }
                 }
 
+                "setClient" -> {
+                    val initials = intent.getStringExtra("initials")?.trim()?.uppercase().orEmpty()
+                    if (initials.isNotEmpty() && !initials.matches(Regex("[A-Z.]{1,6}"))) {
+                        pending.setResultCode(RESULT_MISSING_ARG)
+                        pending.setResultData("invalidInitials")
+                    } else {
+                        prefs.edit().putString("clientInitials", initials).commit()
+                        KioskPolicy.applyLockScreenInfo(dpm, admin, initials)
+                        pending.setResultCode(RESULT_OK)
+                        pending.setResultData(if (initials.isEmpty()) "clientCleared" else "clientSet")
+                    }
+                }
+
                 else -> {
                     pending.setResultCode(RESULT_UNKNOWN_ACTION)
                     pending.setResultData("unknownAction: $action")
@@ -182,6 +195,7 @@ class KioskControlReceiver : BroadcastReceiver() {
             )
             put("effectiveRestrictions", bundleKeys(um.userRestrictions))
             put("deviceTime", System.currentTimeMillis())
+            put("clientInitials", prefs.getString("clientInitials", ""))
         }.toString()
     }
 
@@ -232,4 +246,5 @@ class KioskControlReceiver : BroadcastReceiver() {
             dpm.setGlobalSetting(admin, Settings.Global.AUTO_TIME_ZONE, if (on) "1" else "0")
         }
     }
+
 }

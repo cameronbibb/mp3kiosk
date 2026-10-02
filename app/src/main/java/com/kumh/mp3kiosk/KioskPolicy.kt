@@ -203,4 +203,11 @@ object KioskPolicy {
             Log.d("KioskAdmin", "setApplicationHidden($pkg, $hidden) = $ok")
         }
     }
+
+    private const val LOCK_MESSAGE = "Property of KUMH. Please return to staff."
+
+    fun applyLockScreenInfo(dpm: DevicePolicyManager, admin: ComponentName, initials: String) {
+        val text = if (initials.isEmpty()) LOCK_MESSAGE else "$initials · $LOCK_MESSAGE"
+        dpm.setDeviceOwnerLockScreenInfo(admin, text)
+    }
 }

@@ -96,6 +96,7 @@ class MainActivity : AppCompatActivity() {
 
             if (enabled) {
                 setContentView(R.layout.activity_main)
+                showClientInitials(prefs)
                 findViewById<Button>(R.id.infoButton).setOnClickListener { showInfoDialog() }
                 Log.d("KioskAdmin", "layout inflated")
                 findViewById<Button>(R.id.musicButton).setOnClickListener {
@@ -130,6 +131,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 Log.d("KioskAdmin", "Kiosk disabled - showing lock option")
                 setContentView(R.layout.activity_main)
+                showClientInitials(prefs)
                 findViewById<Button>(R.id.infoButton).setOnClickListener { showInfoDialog() }
                 findViewById<Button>(R.id.musicButton).visibility = View.GONE
                 findViewById<Button>(R.id.lockButton).apply {
@@ -298,6 +300,14 @@ class MainActivity : AppCompatActivity() {
         WindowCompat.getInsetsController(window, window.decorView).apply {
             hide(WindowInsetsCompat.Type.navigationBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+    }
+
+    private fun showClientInitials(prefs: SharedPreferences) {
+        val initials = prefs.getString("clientInitials", "").orEmpty()
+        findViewById<TextView>(R.id.clientInitials)?.apply {
+            text = initials
+            visibility = if (initials.isEmpty()) View.GONE else View.VISIBLE
         }
     }
 }

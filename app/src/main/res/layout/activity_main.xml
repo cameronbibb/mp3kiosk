@@ -13,6 +13,16 @@
         android:layout_height="0dp"
         android:layout_weight="1" />
 
+    <TextView
+        android:id="@+id/clientInitials"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:letterSpacing="0.15"
+        android:textColor="@color/kiosk_text_muted"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
@@ -24,7 +34,7 @@
             android:layout_gravity="center"
             android:fontFamily="sans-serif-light"
             android:format12Hour="h:mm"
-            android:format24Hour="HH:mm"
+            android:format24Hour="h:mm"
             android:textColor="@color/kiosk_text"
             android:textSize="72sp" />
 
