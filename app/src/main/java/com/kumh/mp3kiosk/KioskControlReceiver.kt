@@ -1,6 +1,7 @@
 package com.kumh.mp3kiosk
 
 import android.annotation.SuppressLint
+import android.app.KeyguardManager
 import android.app.admin.DevicePolicyManager
 import android.content.BroadcastReceiver
 import android.content.ComponentName
@@ -12,6 +13,7 @@ import android.os.Bundle
 import android.os.UserManager
 import android.util.Log
 import android.provider.Settings
+import android.util.Base64
 import com.kumh.mp3kiosk.KioskPolicy.permanentRestrictions
 import com.kumh.mp3kiosk.KioskPolicy.temporaryRestrictions
 import org.json.JSONArray
@@ -162,6 +164,15 @@ class KioskControlReceiver : BroadcastReceiver() {
                     }
                 }
 
+                "clearScreenLock" -> {
+                    val token = prefs.getString("resetToken", null)
+                        ?.let { Base64.decode(it, Base64.NO_WRAP) }
+                    val ok = token != null && dpm.resetPasswordWithToken(admin, "", token, 0)
+                    if (ok) dpm.setKeyguardDisabled(admin, true)
+                    pending.setResultCode(if (ok) RESULT_OK else RESULT_ERROR)
+                    pending.setResultData(if (ok) "screenLockCleared" else "clearFailed")
+                }
+                
                 else -> {
                     pending.setResultCode(RESULT_UNKNOWN_ACTION)
                     pending.setResultData("unknownAction: $action")
@@ -196,6 +207,10 @@ class KioskControlReceiver : BroadcastReceiver() {
             put("effectiveRestrictions", bundleKeys(um.userRestrictions))
             put("deviceTime", System.currentTimeMillis())
             put("clientInitials", prefs.getString("clientInitials", ""))
+
+            val km = context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+            put("screenLockSet", km.isDeviceSecure)
+            put("resetTokenActive", if (isOwner) dpm.isResetPasswordTokenActive(admin) else false)
         }.toString()
     }
 

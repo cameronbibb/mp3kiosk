@@ -7,7 +7,9 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.os.UserManager
+import android.util.Base64
 import android.util.Log
+import java.security.SecureRandom
 
 object KioskPolicy {
 
@@ -131,6 +133,8 @@ object KioskPolicy {
         prefs: SharedPreferences
     ): Boolean {
         if (!prefs.contains("pinHash")) return false
+        ensureResetToken(dpm, admin, prefs)
+
         for (r in temporaryRestrictions) dpm.addUserRestriction(admin, r)
         for (r in permanentRestrictions) dpm.addUserRestriction(admin, r)
 
@@ -151,6 +155,11 @@ object KioskPolicy {
                     DevicePolicyManager.LOCK_TASK_FEATURE_SYSTEM_INFO
         )
         dpm.setLockTaskPackages(admin, arrayOf(context.packageName, "com.spotify.music"))
+
+        applyLockScreenInfo(dpm, admin, prefs.getString("clientInitials", "").orEmpty())
+
+        val keyguardOff = dpm.setKeyguardDisabled(admin, true)
+        Log.d("KioskAdmin", "setKeyguardDisabled = $keyguardOff")
 
 
         prefs.edit().putBoolean("kioskEnabled", true).commit()
@@ -209,5 +218,17 @@ object KioskPolicy {
     fun applyLockScreenInfo(dpm: DevicePolicyManager, admin: ComponentName, initials: String) {
         val text = if (initials.isEmpty()) LOCK_MESSAGE else "$initials · $LOCK_MESSAGE"
         dpm.setDeviceOwnerLockScreenInfo(admin, text)
+    }
+
+    fun ensureResetToken(dpm: DevicePolicyManager, admin: ComponentName, prefs: SharedPreferences) {
+        if (dpm.isResetPasswordTokenActive(admin) && prefs.contains("resetToken")) return
+        val token = ByteArray(32).also { SecureRandom().nextBytes(it) }
+        val ok = dpm.setResetPasswordToken(admin, token)
+        if (ok) {
+            prefs.edit()
+                .putString("resetToken", Base64.encodeToString(token, Base64.NO_WRAP))
+                .commit()
+        }
+        Log.d("KioskAdmin", "setResetPasswordToken = $ok, active = ${dpm.isResetPasswordTokenActive(admin)}")
     }
 }
