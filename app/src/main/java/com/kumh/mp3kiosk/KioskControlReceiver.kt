@@ -172,7 +172,7 @@ class KioskControlReceiver : BroadcastReceiver() {
                     pending.setResultCode(if (ok) RESULT_OK else RESULT_ERROR)
                     pending.setResultData(if (ok) "screenLockCleared" else "clearFailed")
                 }
-                
+
                 else -> {
                     pending.setResultCode(RESULT_UNKNOWN_ACTION)
                     pending.setResultData("unknownAction: $action")

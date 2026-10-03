@@ -72,18 +72,11 @@ object KioskPolicy {
 
         // Factory, engineering, and debug tools
         "com.mediatek.engineermode",
-        "com.mediatek.factorymode",
-        "com.sprd.factorymode",
         "com.jz.agingtest",
         "com.zte.engineer",
-        "com.focaltech.fpsensormmitest",
-        "com.mediatek.ygps",
         "com.mediatek.lbs.em2.ui",
-        "com.debug.loggerui",
 
         // System changes residents shouldn't be able to make
-        "com.android.dynsystem",               // can boot a different system image
-        "com.mediatek.voiceunlock",            // another way to set a screen lock
         "com.google.android.apps.wellbeing",   // app timers could block Spotify
 
         // Apps with no kiosk use
@@ -124,7 +117,16 @@ object KioskPolicy {
         "com.android.phone",
         "com.kumh.mp3kiosk",
         "com.spotify.music",
-    )
+        "com.mediatek.voiceunlock",            // another way to set a screen lock
+        "com.android.dynsystem",               // can boot a different system image
+
+        // Hiding one of these caused a boot loop on Android 14 (culprit not yet isolated)
+        "com.debug.loggerui",
+        "com.focaltech.fpsensormmitest",
+        "com.mediatek.ygps",
+        "com.mediatek.factorymode",
+        "com.sprd.factorymode",
+        )
 
     fun enableKiosk(
         context: Context,
