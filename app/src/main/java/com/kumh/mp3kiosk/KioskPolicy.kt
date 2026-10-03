@@ -32,7 +32,8 @@ object KioskPolicy {
         UserManager.DISALLOW_NETWORK_RESET,
         UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES,
         UserManager.DISALLOW_CONFIG_BLUETOOTH,
-        UserManager.DISALLOW_SYSTEM_ERROR_DIALOGS
+        UserManager.DISALLOW_SYSTEM_ERROR_DIALOGS,
+        UserManager.DISALLOW_CONFIG_SCREEN_TIMEOUT
     )
 
     val alwaysHiddenApps = listOf(
