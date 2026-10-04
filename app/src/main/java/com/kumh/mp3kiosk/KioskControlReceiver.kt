@@ -68,7 +68,7 @@ class KioskControlReceiver : BroadcastReceiver() {
                     pending.setResultData("kioskDisabled")
                 }
                 "wipe" -> {
-                    wipeDevice(dpm)
+                    factoryReset(dpm, admin)
                     pending.setResultCode(RESULT_OK)
                     pending.setResultData("wipeInitiated")
                 }
@@ -217,9 +217,14 @@ class KioskControlReceiver : BroadcastReceiver() {
     private fun bundleKeys(b: Bundle): JSONArray =
         JSONArray(b.keySet().filter { b.getBoolean(it) }.sorted())
 
-    private fun wipeDevice(dpm: DevicePolicyManager) {
+    private fun factoryReset(dpm: DevicePolicyManager, admin: ComponentName) {
         Log.d("KioskAdmin", "Wiping device...")
-        dpm.wipeData(0)
+        dpm.clearUserRestriction(admin, UserManager.DISALLOW_FACTORY_RESET)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            dpm.wipeDevice(0)
+        } else {
+            dpm.wipeData(0)
+        }
     }
 
     private fun restrictDevice(dpm: DevicePolicyManager, admin: ComponentName) {
