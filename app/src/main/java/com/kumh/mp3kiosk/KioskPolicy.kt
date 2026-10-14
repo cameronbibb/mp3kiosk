@@ -224,14 +224,18 @@ object KioskPolicy {
     }
 
     fun ensureResetToken(dpm: DevicePolicyManager, admin: ComponentName, prefs: SharedPreferences) {
-        if (dpm.isResetPasswordTokenActive(admin) && prefs.contains("resetToken")) return
-        val token = ByteArray(32).also { SecureRandom().nextBytes(it) }
-        val ok = dpm.setResetPasswordToken(admin, token)
-        if (ok) {
-            prefs.edit()
-                .putString("resetToken", Base64.encodeToString(token, Base64.NO_WRAP))
-                .commit()
+        try {
+            if (dpm.isResetPasswordTokenActive(admin) && prefs.contains("resetToken")) return
+            val token = ByteArray(32).also { SecureRandom().nextBytes(it) }
+            val ok = dpm.setResetPasswordToken(admin, token)
+            if (ok) {
+                prefs.edit()
+                    .putString("resetToken", Base64.encodeToString(token, Base64.NO_WRAP))
+                    .commit()
+            }
+            Log.d("KioskAdmin", "setResetPasswordToken = $ok, active = ${dpm.isResetPasswordTokenActive(admin)}")
+        } catch (e: Exception) {
+            Log.w("KioskAdmin", "Reset token unavailable: ${e.message}")
         }
-        Log.d("KioskAdmin", "setResetPasswordToken = $ok, active = ${dpm.isResetPasswordTokenActive(admin)}")
     }
 }
