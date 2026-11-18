@@ -7,9 +7,12 @@ For the background and design decisions behind this project, read the [case stud
 <p align="center">
   <img src="docs/screenshots/locked.png" alt="Locked kiosk home screen" width="240">
   <img src="docs/screenshots/unlocked.png" alt="Unlocked kiosk with Lock button" width="240">
+</p>
+<p align="center">
   <img src="docs/screenshots/information.png" alt="Info dialog" width="240">
   <img src="docs/screenshots/admin.png" alt="Admin unlock" width="240">
 </p>
+
 ---
 
 ## What It Does
@@ -19,7 +22,7 @@ When provisioned and enabled, the app:
 - Presents a full-screen kiosk home screen showing a clock, date, battery status, and available storage
 - Launches Spotify as the only accessible application
 - Prevents the user from leaving the kiosk (back button suppressed, home screen locked, navigation bar hidden)
-- Hides 90+ system and third-party apps that could be used to escape the kiosk or reconfigure the device
+- Hides 40+ system and third-party apps that could be used to escape the kiosk or reconfigure the device
 - Applies device-wide restrictions (factory reset, Wi-Fi, Bluetooth, app installation, etc.)
 - Displays an optional client identifier set by staff
 - Accepts remote control commands via authenticated ADB broadcast
@@ -93,7 +96,7 @@ The kiosk cannot be enabled until a PIN is set. Send a broadcast to set it:
 
 ```bash
 adb shell am broadcast \
-  -a com.kumh.mp3kiosk.CONTROL \
+  -n com.kumh.mp3kiosk/.KioskControlReceiver \
   --es token "YOUR_TOKEN" \
   --es action "setPin" \
   --es pin "YOURPIN"
@@ -105,7 +108,7 @@ PIN must be 4–8 digits, numeric only.
 
 ```bash
 adb shell am broadcast \
-  -a com.kumh.mp3kiosk.CONTROL \
+  -n com.kumh.mp3kiosk/.KioskControlReceiver \
   --es token "YOUR_TOKEN" \
   --es action "enableKiosk"
 ```
@@ -122,7 +125,7 @@ All commands are sent as broadcast intents and require the `token` extra to matc
 
 ```bash
 adb shell am broadcast \
-  -a com.kumh.mp3kiosk.CONTROL \
+    -n com.kumh.mp3kiosk/.KioskControlReceiver \
   --es token "YOUR_TOKEN" \
   --es action "ACTION_NAME" \
   [additional extras]
