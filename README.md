@@ -4,6 +4,7 @@ An Android kiosk application that locks a device down to a single-purpose Spotif
 
 For the background and design decisions behind this project, read the [case study on my portfolio](https://cameronbibb.com/work/mp3-fleet-manager/).
 
+![Locked kiosk home screen showing client initials, clock, date, battery, storage, and Music button](docs/screenshots/locked.png)
 ---
 
 ## What It Does
